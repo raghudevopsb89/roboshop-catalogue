@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+env
+
 : "${MYSQL_HOST:?MYSQL_HOST is required}"
 : "${MYSQL_ROOT_PASSWORD:?MYSQL_ROOT_PASSWORD is required}"
 : "${MYSQL_USER:?MYSQL_USER is required}"
