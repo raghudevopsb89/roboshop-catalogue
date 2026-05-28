@@ -1,16 +1,4 @@
 #!/usr/bin/env bash
-set -e
-
-ls -l /data/params
-
-cat /data/params
-
-if [ -f /data/params ]; then
-    set -a
-    # shellcheck disable=SC1091
-    source /data/params
-    set +a
-fi
 
 : "${MYSQL_HOST:?MYSQL_HOST is required}"
 : "${MYSQL_ROOT_PASSWORD:?MYSQL_ROOT_PASSWORD is required}"
