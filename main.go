@@ -51,7 +51,7 @@ func connectDB() {
 				return
 			}
 		}
-		log.Printf("MySQL connection attempt %d/30 failed, retrying in 2s...", i+1)
+		log.Printf("MySQL connection attempt %d/30 failed: %v, retrying in 2s...", i+1, err)
 		time.Sleep(2 * time.Second)
 	}
 	log.Fatal("Failed to connect to MySQL:", err)
