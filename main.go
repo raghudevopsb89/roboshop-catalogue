@@ -6,11 +6,15 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strconv"
 	"time"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	_ "github.com/go-sql-driver/mysql"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 type Product struct {
@@ -25,6 +29,49 @@ type Product struct {
 }
 
 var db *sql.DB
+
+var (
+	httpRequestsTotal = promauto.NewCounterVec(
+		prometheus.CounterOpts{
+			Name: "http_requests_total",
+			Help: "Total number of HTTP requests",
+		},
+		[]string{"method", "path", "status"},
+	)
+	httpRequestDuration = promauto.NewHistogramVec(
+		prometheus.HistogramOpts{
+			Name:    "http_request_duration_seconds",
+			Help:    "Duration of HTTP requests in seconds",
+			Buckets: prometheus.DefBuckets,
+		},
+		[]string{"method", "path", "status"},
+	)
+)
+
+func prometheusMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		if c.Request.URL.Path == "/metrics" {
+			c.Next()
+			return
+		}
+
+		start := time.Now()
+		c.Next()
+
+		path := c.FullPath()
+		if path == "" {
+			path = c.Request.URL.Path
+		}
+		status := strconv.Itoa(c.Writer.Status())
+		labels := prometheus.Labels{
+			"method": c.Request.Method,
+			"path":   path,
+			"status": status,
+		}
+		httpRequestsTotal.With(labels).Inc()
+		httpRequestDuration.With(labels).Observe(time.Since(start).Seconds())
+	}
+}
 
 func getEnv(key, fallback string) string {
 	if value, ok := os.LookupEnv(key); ok {
@@ -63,10 +110,12 @@ func main() {
 
 	r := gin.Default()
 	r.Use(cors.Default())
+	r.Use(prometheusMiddleware())
 
 	r.GET("/health", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"status": "OK", "service": "catalogue"})
 	})
+	r.GET("/metrics", gin.WrapH(promhttp.Handler()))
 
 	r.GET("/products", getProducts)
 	r.GET("/products/search", searchProducts)
