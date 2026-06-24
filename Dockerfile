@@ -11,4 +11,6 @@ RUN apk --no-cache add ca-certificates
 WORKDIR /app
 COPY --from=build /app/catalogue .
 EXPOSE 8002
+ENV NEW_RELIC_APP_NAME=roboshop-catalogue
+ENV NEW_RELIC_DISTRIBUTED_TRACING_ENABLED=true
 CMD ["./catalogue"]

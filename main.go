@@ -1,21 +1,61 @@
 package main
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"log"
+	"log/slog"
 	"net/http"
 	"os"
+	"os/signal"
 	"strconv"
+	"sync/atomic"
+	"syscall"
 	"time"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
-	_ "github.com/go-sql-driver/mysql"
+	"github.com/newrelic/go-agent/v3/integrations/nrgin"
+	_ "github.com/newrelic/go-agent/v3/integrations/nrmysql"
+	"github.com/newrelic/go-agent/v3/newrelic"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
+
+var jlog = slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: slog.LevelInfo}))
+
+var reqSeq atomic.Uint64
+
+func structuredLogger() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		if c.Request.URL.Path == "/metrics" || c.Request.URL.Path == "/health" {
+			c.Next()
+			return
+		}
+		reqID := c.GetHeader("X-Request-ID")
+		if reqID == "" {
+			reqID = fmt.Sprintf("%d-%d", os.Getpid(), reqSeq.Add(1))
+		}
+		c.Writer.Header().Set("X-Request-ID", reqID)
+		start := time.Now()
+		jlog.Info("req.start",
+			"service", "catalogue", "reqId", reqID,
+			"method", c.Request.Method, "path", c.Request.URL.Path, "remote", c.ClientIP())
+		c.Next()
+		event := "finish"
+		select {
+		case <-c.Request.Context().Done():
+			event = "close"
+		default:
+		}
+		jlog.Info("req."+event,
+			"service", "catalogue", "reqId", reqID,
+			"method", c.Request.Method, "path", c.Request.URL.Path,
+			"status", c.Writer.Status(), "durMs", float64(time.Since(start).Microseconds())/1000.0)
+	}
+}
 
 type Product struct {
 	ID          int64   `json:"id"`
@@ -90,15 +130,15 @@ func connectDB() {
 
 	var err error
 	for i := 0; i < 30; i++ {
-		db, err = sql.Open("mysql", dsn)
+		db, err = sql.Open("nrmysql", dsn)
 		if err == nil {
 			err = db.Ping()
 			if err == nil {
-				log.Println("Connected to MySQL")
+				jlog.Info("Connected to MySQL", "service", "catalogue")
 				return
 			}
 		}
-		log.Printf("MySQL connection attempt %d/30 failed: %v, retrying in 2s...", i+1, err)
+		jlog.Warn("MySQL connection attempt failed", "service", "catalogue", "attempt", i+1, "error", err)
 		time.Sleep(2 * time.Second)
 	}
 	log.Fatal("Failed to connect to MySQL:", err)
@@ -108,8 +148,23 @@ func main() {
 	connectDB()
 	defer db.Close()
 
-	r := gin.Default()
+	nrApp, err := newrelic.NewApplication(
+		newrelic.ConfigAppName(getEnv("NEW_RELIC_APP_NAME", "roboshop-catalogue")),
+		newrelic.ConfigLicense(os.Getenv("NEW_RELIC_LICENSE_KEY")),
+		newrelic.ConfigDistributedTracerEnabled(true),
+		newrelic.ConfigAppLogForwardingEnabled(true),
+	)
+	if err != nil {
+		jlog.Warn("newrelic init failed", "service", "catalogue", "error", err)
+	}
+
+	r := gin.New()
+	r.Use(gin.Recovery())
+	if nrApp != nil {
+		r.Use(nrgin.Middleware(nrApp))
+	}
 	r.Use(cors.Default())
+	r.Use(structuredLogger())
 	r.Use(prometheusMiddleware())
 
 	r.GET("/health", func(c *gin.Context) {
@@ -123,8 +178,27 @@ func main() {
 	r.GET("/categories", getCategories)
 
 	port := getEnv("PORT", "8002")
-	log.Printf("Catalogue service listening on port %s", port)
-	r.Run(":" + port)
+	srv := &http.Server{Addr: ":" + port, Handler: r}
+
+	go func() {
+		jlog.Info("server.listen", "service", "catalogue", "port", port, "pid", os.Getpid())
+		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			jlog.Error("server.listen.error", "service", "catalogue", "error", err)
+			os.Exit(1)
+		}
+	}()
+
+	stop := make(chan os.Signal, 1)
+	signal.Notify(stop, syscall.SIGTERM, syscall.SIGINT)
+	sig := <-stop
+	jlog.Warn("server.shutdown.start", "service", "catalogue", "signal", sig.String())
+	ctx, cancel := context.WithTimeout(context.Background(), 25*time.Second)
+	defer cancel()
+	if err := srv.Shutdown(ctx); err != nil {
+		jlog.Error("server.shutdown.error", "service", "catalogue", "error", err)
+		os.Exit(1)
+	}
+	jlog.Info("server.shutdown.done", "service", "catalogue", "signal", sig.String())
 }
 
 func getProducts(c *gin.Context) {
