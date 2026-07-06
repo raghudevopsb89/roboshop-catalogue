@@ -8,7 +8,7 @@ require (
 	github.com/go-sql-driver/mysql v1.8.1
 	github.com/newrelic/go-agent/v3 v3.34.0
 	github.com/newrelic/go-agent/v3/integrations/nrgin v1.3.0
-	github.com/newrelic/go-agent/v3/integrations/nrmysql v1.4.0
+	github.com/newrelic/go-agent/v3/integrations/nrmysql v1.2.2
 	github.com/prometheus/client_golang v1.20.5
 )
 
