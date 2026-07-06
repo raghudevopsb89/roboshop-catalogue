@@ -7,8 +7,11 @@ run:
 	MYSQL_HOST=localhost MYSQL_USER=catalogue MYSQL_PASSWORD=RoboShop@1 MYSQL_DATABASE=catalogue go run .
 
 docker-build:
-	docker build -t raghudevopsb89.azurecr.io/roboshop-catalogue .
-	docker push raghudevopsb89.azurecr.io/roboshop-catalogue
+	env
+	docker build -t raghudevopsb89.azurecr.io/roboshop-catalogue:${GITHUB_SHA} .
+
+docker-push:
+	docker push raghudevopsb89.azurecr.io/roboshop-catalogue:${GITHUB_SHA}
 
 db-init:
 	mysql -h $${MYSQL_HOST:-localhost} -u root -pRoboShop@1 < db/app-user.sql
