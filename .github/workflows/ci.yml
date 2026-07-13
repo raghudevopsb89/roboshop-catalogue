@@ -17,10 +17,30 @@ jobs:
     needs: lint
     runs-on: self-hosted
     steps:
-      - run: echo "Test Cases"
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - name: Run tests
+        run: go test ./...
+
+  integration-test:
+    needs: test
+    runs-on: self-hosted
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - name: Run integration tests
+        run: go test -tags=integration ./...
 
   ci:
-    needs: test
+    needs: integration-test
     uses: raghudevopsb89/github-actions/.github/workflows/ci.yml@main
     with:
       component_name: catalogue

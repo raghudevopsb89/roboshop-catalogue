@@ -167,15 +167,7 @@ func main() {
 	r.Use(structuredLogger())
 	r.Use(prometheusMiddleware())
 
-	r.GET("/health", func(c *gin.Context) {
-		c.JSON(http.StatusOK, gin.H{"status": "OK", "service": "catalogue"})
-	})
-	r.GET("/metrics", gin.WrapH(promhttp.Handler()))
-
-	r.GET("/products", getProducts)
-	r.GET("/products/search", searchProducts)
-	r.GET("/products/:id", getProductByID)
-	r.GET("/categories", getCategories)
+	registerRoutes(r)
 
 	port := getEnv("PORT", "8002")
 	srv := &http.Server{Addr: ":" + port, Handler: r}
@@ -199,6 +191,20 @@ func main() {
 		os.Exit(1)
 	}
 	jlog.Info("server.shutdown.done", "service", "catalogue", "signal", sig.String())
+}
+
+// registerRoutes wires all HTTP routes onto the provided engine. It is called
+// by main() and re-used by tests so both exercise identical route registration.
+func registerRoutes(r *gin.Engine) {
+	r.GET("/health", func(c *gin.Context) {
+		c.JSON(http.StatusOK, gin.H{"status": "OK", "service": "catalogue"})
+	})
+	r.GET("/metrics", gin.WrapH(promhttp.Handler()))
+
+	r.GET("/products", getProducts)
+	r.GET("/products/search", searchProducts)
+	r.GET("/products/:id", getProductByID)
+	r.GET("/categories", getCategories)
 }
 
 func getProducts(c *gin.Context) {

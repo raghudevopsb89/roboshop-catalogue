@@ -1,10 +1,16 @@
-.PHONY: build run docker-build db-init clean
+.PHONY: build run unit-test integration-test docker-build db-init clean
 
 build:
 	go mod tidy && go build -o catalogue .
 
 run:
 	MYSQL_HOST=localhost MYSQL_USER=catalogue MYSQL_PASSWORD=RoboShop@1 MYSQL_DATABASE=catalogue go run .
+
+unit-test:
+	go test ./...
+
+integration-test:
+	go test -tags=integration ./...
 
 docker-build:
 	env

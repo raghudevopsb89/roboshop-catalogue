@@ -1,0 +1,15 @@
+# Compiled binary
+/catalogue
+*.exe
+*.test
+*.out
+coverage.out
+
+# Env & secrets
+.env
+
+# OS / editor
+.DS_Store
+*.log
+.idea/
+.vscode/
