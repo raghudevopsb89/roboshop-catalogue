@@ -52,7 +52,7 @@ jobs:
       - name: Run integration tests
         run: make coverage sonar-scan
   ci:
-    needs: integration-test
+    needs: needs: [integration-test, sast, test ]
     uses: raghudevopsb89/github-actions/.github/workflows/ci.yml@main
     with:
       component_name: catalogue
