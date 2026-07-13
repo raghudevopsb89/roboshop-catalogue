@@ -1,4 +1,4 @@
-.PHONY: build run unit-test integration-test docker-build db-init clean
+.PHONY: build run unit-test integration-test coverage docker-build db-init clean
 
 build:
 	go mod tidy && go build -o catalogue .
@@ -11,6 +11,9 @@ unit-test:
 
 integration-test:
 	go test -tags=integration ./...
+
+coverage:
+	go test -coverprofile=coverage.out -covermode=atomic ./...
 
 docker-build:
 	env
