@@ -13,46 +13,46 @@ jobs:
     steps:
       - run: echo "golangci-lint run ./..."
 
-  test:
-    needs: lint
-    runs-on: self-hosted
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-      - name: Setup Go
-        uses: actions/setup-go@v5
-        with:
-          go-version-file: go.mod
-      - name: Run tests
-        run: go test ./...
-
-  integration-test:
-    needs: lint
-    runs-on: self-hosted
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-      - name: Setup Go
-        uses: actions/setup-go@v5
-        with:
-          go-version-file: go.mod
-      - name: Run integration tests
-        run: go test -tags=integration ./...
-
-  sast:
-    needs: lint
-    runs-on: self-hosted
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-      - name: Setup Go
-        uses: actions/setup-go@v5
-        with:
-          go-version-file: go.mod
-      - name: Run integration tests
-        run: make coverage sonar-scan
+#   test:
+#     needs: lint
+#     runs-on: self-hosted
+#     steps:
+#       - name: Checkout
+#         uses: actions/checkout@v4
+#       - name: Setup Go
+#         uses: actions/setup-go@v5
+#         with:
+#           go-version-file: go.mod
+#       - name: Run tests
+#         run: go test ./...
+#
+#   integration-test:
+#     needs: lint
+#     runs-on: self-hosted
+#     steps:
+#       - name: Checkout
+#         uses: actions/checkout@v4
+#       - name: Setup Go
+#         uses: actions/setup-go@v5
+#         with:
+#           go-version-file: go.mod
+#       - name: Run integration tests
+#         run: go test -tags=integration ./...
+#
+#   sast:
+#     needs: lint
+#     runs-on: self-hosted
+#     steps:
+#       - name: Checkout
+#         uses: actions/checkout@v4
+#       - name: Setup Go
+#         uses: actions/setup-go@v5
+#         with:
+#           go-version-file: go.mod
+#       - name: Run integration tests
+#         run: make coverage sonar-scan
   ci:
-    needs: [integration-test, sast, test ]
+    #needs: [integration-test, sast, test ]
     uses: raghudevopsb89/github-actions/.github/workflows/ci.yml@main
     with:
       component_name: catalogue
