@@ -7,7 +7,7 @@ COPY . .
 RUN go mod tidy && CGO_ENABLED=0 go build -o catalogue .
 
 FROM alpine:3.19
-RUN apk --no-cache add ca-certificates
+RUN apk update && apk upgrade --no-cache && apk --no-cache add ca-certificates
 WORKDIR /app
 COPY --from=build /app/catalogue .
 EXPOSE 8002
