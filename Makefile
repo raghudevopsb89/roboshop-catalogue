@@ -19,6 +19,9 @@ docker-build:
 	env
 	docker build -t raghudevopsb89.azurecr.io/roboshop-catalogue:${GITHUB_SHA} .
 
+docker-scan:
+	trivy image raghudevopsb89.azurecr.io/roboshop-cart:${GITHUB_SHA}
+
 docker-push:
 	docker push raghudevopsb89.azurecr.io/roboshop-catalogue:${GITHUB_SHA}
 
