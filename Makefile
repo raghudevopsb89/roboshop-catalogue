@@ -20,7 +20,7 @@ docker-build:
 	docker build -t raghudevopsb89.azurecr.io/roboshop-catalogue:${GITHUB_SHA} .
 
 docker-scan:
-	trivy image raghudevopsb89.azurecr.io/roboshop-catalogue:${GITHUB_SHA}
+	trivy image raghudevopsb89.azurecr.io/roboshop-catalogue:${GITHUB_SHA} --exit-code 1 --ignore-unfixed -s HIGH,CRITICAL
 
 docker-push:
 	docker push raghudevopsb89.azurecr.io/roboshop-catalogue:${GITHUB_SHA}
